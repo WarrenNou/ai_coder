@@ -1,51 +1,86 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-dotenv.config();
+import helmet from "helmet";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
+import { config } from "./config/index.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import { requestLogger } from "./middleware/requestLogger.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 const app = express();
-app.use(cors());
+
+// Security middleware
+app.use(helmet());
+
+// Compression
+app.use(compression());
+
+// Rate limiting
+app.use(rateLimit(config.rateLimiting));
+
+// Basic middleware
+app.use(cors(config.cors));
 app.use(express.json());
+app.use(requestLogger);
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-
-app.post("/api/generate", async (req, res) => {
-  try {
-    const { prompt, model } = req.body;
-    const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    // Parse the response to separate code and documentation
-    const codeMatch = text.match(/```[\s\S]*?```/);
-    const code = codeMatch
-      ? codeMatch[0].replace(/```[\w]*\n?|```/g, "")
-      : text;
-    const documentation = text.replace(/```[\s\S]*?```/g, "").trim();
-
-    res.json({
-      generatedCode: code,
-      documentation: documentation,
-      executionResults: "Code generated successfully",
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Failed to generate code" });
-  }
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: config.env,
+  });
 });
 
-const PORT = process.env.PORT || 3001;
-// Ensure we're not trying to use port 3000
-if (PORT === 3000) {
-  console.warn(
-    "Port 3000 is typically used by the frontend. Using 3001 instead.",
-  );
-  PORT = 3001;
-}
-app.listen(PORT, process.env.HOST || "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
+// Routes
+app.use("/api", aiRoutes);
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      message: "Not Found",
+      status: 404,
+      path: req.path,
+    },
+  });
+});
+
+// Error handling
+app.use(errorHandler);
+
+// Start server
+const server = app.listen(config.port, config.host, () => {
+  console.log(`Server running at http://${config.host}:${config.port}`);
+  console.log(`Environment: ${config.env}`);
+});
+
+// Graceful shutdown
+const shutdown = (signal) => {
+  console.log(`${signal} signal received: closing HTTP server`);
+  server.close(() => {
+    console.log("HTTP server closed");
+    process.exit(0);
+  });
+
+  // Force close after 10s
+  setTimeout(() => {
+    console.log("Forcing shutdown after timeout");
+    process.exit(1);
+  }, 10000);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  shutdown("UNCAUGHT_EXCEPTION");
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });

@@ -2,6 +2,7 @@ import React from "react";
 import { generateCode } from "../lib/api";
 import TopBar from "./TopBar";
 import IDELayout from "./IDELayout";
+import { motion } from "framer-motion";
 
 interface HomeProps {
   initialCode?: string;
@@ -42,25 +43,41 @@ const Home = ({
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-background">
-      <TopBar
-        projectName={projectName}
-        onSettingsClick={() => console.log("Settings clicked")}
-        onHelpClick={() => console.log("Help clicked")}
-        onGithubClick={() => console.log("Github clicked")}
-      />
-      <div className="flex-1 overflow-hidden">
-        <IDELayout
-          code={code}
-          onCodeChange={handleCodeChange}
-          onPromptSubmit={handlePromptSubmit}
-          onModelSelect={handleModelSelect}
-          generatedCode={generatedCode}
-          documentation={documentation}
-          executionResults={executionResults}
-          isLoading={isLoading}
+    <div className="min-h-screen w-full bg-gradient-to-b from-background via-background/95 to-background">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10"
+      >
+        <TopBar
+          projectName={projectName}
+          onSettingsClick={() => console.log("Settings clicked")}
+          onHelpClick={() => console.log("Help clicked")}
+          onGithubClick={() => console.log("Github clicked")}
         />
-      </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="container mx-auto px-4 py-6"
+        >
+          <IDELayout
+            code={code}
+            onCodeChange={handleCodeChange}
+            onPromptSubmit={handlePromptSubmit}
+            onModelSelect={handleModelSelect}
+            generatedCode={generatedCode}
+            documentation={documentation}
+            executionResults={executionResults}
+            isLoading={isLoading}
+          />
+        </motion.div>
+      </motion.div>
+
+      {/* Background gradient effects */}
+      <div className="fixed inset-0 -z-10 bg-gradient-to-tr from-primary/5 via-primary/2 to-background" />
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
     </div>
   );
 };

@@ -6,6 +6,7 @@ import {
 } from "./ui/resizable";
 import CodeEditor from "./CodeEditor";
 import AIControlPanel from "./AIControlPanel";
+import { motion } from "framer-motion";
 
 interface IDELayoutProps {
   onCodeChange?: (code: string) => void;
@@ -29,12 +30,18 @@ const IDELayout = ({
   isLoading = false,
 }: IDELayoutProps) => {
   return (
-    <div className="h-full w-full bg-background">
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="h-full w-full rounded-lg border"
-      >
-        <ResizablePanel defaultSize={50} minSize={30}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="h-[calc(100vh-8rem)] w-full rounded-xl overflow-hidden glass-panel glow-subtle"
+    >
+      <ResizablePanelGroup direction="horizontal" className="h-full rounded-xl">
+        <ResizablePanel
+          defaultSize={50}
+          minSize={30}
+          className="transition-all duration-200"
+        >
           <CodeEditor
             code={code}
             onCodeChange={onCodeChange}
@@ -42,9 +49,13 @@ const IDELayout = ({
           />
         </ResizablePanel>
 
-        <ResizableHandle />
+        <ResizableHandle className="w-2 bg-white/5 hover:bg-primary/20 transition-colors" />
 
-        <ResizablePanel defaultSize={50} minSize={30}>
+        <ResizablePanel
+          defaultSize={50}
+          minSize={30}
+          className="transition-all duration-200"
+        >
           <AIControlPanel
             onPromptSubmit={onPromptSubmit}
             onModelSelect={onModelSelect}
@@ -55,7 +66,7 @@ const IDELayout = ({
           />
         </ResizablePanel>
       </ResizablePanelGroup>
-    </div>
+    </motion.div>
   );
 };
 
